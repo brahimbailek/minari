@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_change_me_in_production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
@@ -19,22 +19,18 @@ interface RefreshTokenPayload {
  * Generate access token (short-lived, 15 minutes)
  */
 export const generateAccessToken = (userId: string, email: string, role: string): string => {
-  return jwt.sign(
-    { userId, email, role } as TokenPayload,
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
-  );
+  const payload: TokenPayload = { userId, email, role };
+  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN };
+  return jwt.sign(payload, JWT_SECRET, options);
 };
 
 /**
  * Generate refresh token (long-lived, 7 days)
  */
 export const generateRefreshToken = (userId: string): string => {
-  return jwt.sign(
-    { userId } as RefreshTokenPayload,
-    REFRESH_SECRET,
-    { expiresIn: REFRESH_EXPIRES_IN }
-  );
+  const payload: RefreshTokenPayload = { userId };
+  const options: SignOptions = { expiresIn: REFRESH_EXPIRES_IN };
+  return jwt.sign(payload, REFRESH_SECRET, options);
 };
 
 /**
