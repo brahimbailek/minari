@@ -1,0 +1,494 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  BUSINESS
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  TRIALING
+}
+
+enum NumberStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum NumberType {
+  LOCAL
+  MOBILE
+  TOLL_FREE
+}
+
+enum CallDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CallStatus {
+  QUEUED
+  RINGING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  BUSY
+  NO_ANSWER
+  CANCELLED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatus {
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  RECEIVED
+}
+
+enum MessageType {
+  SMS
+  MMS
+}
+
+enum UsageType {
+  CALL_MINUTES
+  SMS_SENT
+  MMS_SENT
+  PHONE_NUMBER
+}
+
+enum NotificationType {
+  CALL_MISSED
+  MESSAGE_RECEIVED
+  VOICEMAIL
+  BILLING
+  SYSTEM
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  phoneNumber   String?  @map("phone_number")
+  passwordHash  String   @map("password_hash")
+  firstName     String?  @map("first_name")
+  lastName      String?  @map("last_name")
+  role          UserRole @default(USER)
+
+  // 2FA
+  twoFaEnabled  Boolean @default(false) @map("two_fa_enabled")
+  twoFaSecret   String? @map("two_fa_secret")
+
+  // Profile
+  avatarUrl     String?  @map("avatar_url")
+  companyName   String?  @map("company_name")
+  timezone      String   @default("Europe/Paris")
+
+  // Status
+  emailVerified Boolean  @default(false) @map("email_verified")
+  isActive      Boolean  @default(true) @map("is_active")
+  lastLogin     DateTime? @map("last_login")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  refreshTokens RefreshToken[]
+  phoneNumbers  PhoneNumber[]
+  contacts      Contact[]
+  calls         Call[]
+  messages      Message[]
+  subscription  Subscription?
+  invoices      Invoice[]
+  usageRecords  UsageRecord[]
+  notifications Notification[]
+  deviceTokens  DeviceToken[]
+
+  @@map("users")
+  @@index([email])
+  @@index([phoneNumber])
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token      String   @unique
+  deviceId   String?  @map("device_id")
+  deviceName String?  @map("device_name")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("refresh_tokens")
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model PhoneNumber {
+  id          String       @id @default(uuid())
+  userId      String       @map("user_id")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  phoneNumber String       @unique @map("phone_number")
+  friendlyName String?     @map("friendly_name")
+  countryCode String       @map("country_code")
+  numberType  NumberType   @default(LOCAL) @map("number_type")
+
+  twilioSid   String       @unique @map("twilio_sid")
+  twilioCapabilities Json? @map("twilio_capabilities")
+
+  status      NumberStatus @default(ACTIVE)
+  purchasedAt DateTime     @default(now()) @map("purchased_at")
+  expiresAt   DateTime?    @map("expires_at")
+
+  monthlyCost Decimal      @map("monthly_cost") @db.Decimal(10, 2)
+
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  usageRecords UsageRecord[]
+
+  @@map("phone_numbers")
+  @@index([userId])
+  @@index([phoneNumber])
+  @@index([status])
+}
+
+model Contact {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  firstName   String?  @map("first_name")
+  lastName    String?  @map("last_name")
+  phoneNumber String   @map("phone_number")
+  email       String?
+  company     String?
+  notes       String?
+
+  tags        String[]
+  isFavorite  Boolean  @default(false) @map("is_favorite")
+
+  avatarUrl   String?  @map("avatar_url")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  calls       Call[]
+  messages    Message[]
+
+  @@unique([userId, phoneNumber])
+  @@map("contacts")
+  @@index([userId])
+  @@index([phoneNumber])
+}
+
+model Call {
+  id         String        @id @default(uuid())
+  userId     String        @map("user_id")
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contactId  String?       @map("contact_id")
+  contact    Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  fromNumber String        @map("from_number")
+  toNumber   String        @map("to_number")
+  direction  CallDirection
+  status     CallStatus
+
+  twilioCallSid String?    @unique @map("twilio_call_sid")
+
+  startedAt  DateTime?    @map("started_at")
+  answeredAt DateTime?    @map("answered_at")
+  endedAt    DateTime?    @map("ended_at")
+  durationSeconds Int      @default(0) @map("duration_seconds")
+  billableDurationSeconds Int @default(0) @map("billable_duration_seconds")
+
+  cost       Decimal?     @db.Decimal(10, 4)
+  costCurrency String     @default("EUR") @map("cost_currency")
+
+  recordingUrl String?    @map("recording_url")
+  recordingDurationSeconds Int? @map("recording_duration_seconds")
+
+  userAgent  String?      @map("user_agent")
+  qualityScore Int?       @map("quality_score")
+
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  usageRecords UsageRecord[]
+
+  @@map("calls")
+  @@index([userId])
+  @@index([contactId])
+  @@index([fromNumber])
+  @@index([toNumber])
+  @@index([startedAt])
+  @@index([status])
+}
+
+model Message {
+  id             String           @id @default(uuid())
+  userId         String           @map("user_id")
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversationId String?          @map("conversation_id")
+  contactId      String?          @map("contact_id")
+  contact        Contact?         @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  fromNumber     String           @map("from_number")
+  toNumber       String           @map("to_number")
+  direction      MessageDirection
+  type           MessageType      @default(SMS)
+
+  body           String?
+  mediaUrls      String[]         @map("media_urls")
+
+  twilioMessageSid String?        @unique @map("twilio_message_sid")
+  status         MessageStatus
+  errorCode      Int?             @map("error_code")
+  errorMessage   String?          @map("error_message")
+
+  isEncrypted    Boolean          @default(true) @map("is_encrypted")
+  encryptionKeyId String?         @map("encryption_key_id")
+
+  sentAt         DateTime?        @map("sent_at")
+  deliveredAt    DateTime?        @map("delivered_at")
+  readAt         DateTime?        @map("read_at")
+
+  cost           Decimal?         @db.Decimal(10, 4)
+  costCurrency   String           @default("EUR") @map("cost_currency")
+
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  usageRecords   UsageRecord[]
+
+  @@map("messages")
+  @@index([userId])
+  @@index([conversationId])
+  @@index([contactId])
+  @@index([fromNumber])
+  @@index([toNumber])
+  @@index([createdAt])
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  userId               String             @unique @map("user_id")
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeCustomerId     String             @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
+  stripePriceId        String?            @map("stripe_price_id")
+
+  tier                 SubscriptionTier
+  status               SubscriptionStatus @default(TRIALING)
+
+  trialEndsAt          DateTime?          @map("trial_ends_at")
+  currentPeriodStart   DateTime           @map("current_period_start")
+  currentPeriodEnd     DateTime           @map("current_period_end")
+  cancelledAt          DateTime?          @map("cancelled_at")
+  cancelAtPeriodEnd    Boolean            @default(false) @map("cancel_at_period_end")
+
+  amount               Decimal            @db.Decimal(10, 2)
+  currency             String             @default("EUR")
+
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  invoices             Invoice[]
+  usageRecords         UsageRecord[]
+
+  @@map("subscriptions")
+  @@index([userId])
+  @@index([stripeCustomerId])
+  @@index([status])
+}
+
+model Invoice {
+  id               String        @id @default(uuid())
+  userId           String        @map("user_id")
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionId   String?       @map("subscription_id")
+  subscription     Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  stripeInvoiceId  String        @unique @map("stripe_invoice_id")
+
+  amountDue        Decimal       @map("amount_due") @db.Decimal(10, 2)
+  amountPaid       Decimal       @default(0) @map("amount_paid") @db.Decimal(10, 2)
+  currency         String        @default("EUR")
+  status           String
+
+  lineItems        Json?         @map("line_items")
+
+  invoiceDate      DateTime      @map("invoice_date")
+  dueDate          DateTime?     @map("due_date")
+  paidAt           DateTime?     @map("paid_at")
+
+  invoicePdfUrl    String?       @map("invoice_pdf_url")
+
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  @@map("invoices")
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([status])
+}
+
+model UsageRecord {
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionId String?       @map("subscription_id")
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  type           UsageType
+  quantity       Decimal       @db.Decimal(10, 4)
+  unitCost       Decimal?      @map("unit_cost") @db.Decimal(10, 4)
+  totalCost      Decimal?      @map("total_cost") @db.Decimal(10, 4)
+  currency       String        @default("EUR")
+
+  callId         String?       @map("call_id")
+  call           Call?         @relation(fields: [callId], references: [id], onDelete: SetNull)
+  messageId      String?       @map("message_id")
+  message        Message?      @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  phoneNumberId  String?       @map("phone_number_id")
+  phoneNumber    PhoneNumber?  @relation(fields: [phoneNumberId], references: [id], onDelete: SetNull)
+
+  periodStart    DateTime      @map("period_start")
+  periodEnd      DateTime      @map("period_end")
+
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  @@map("usage_records")
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([periodStart, periodEnd])
+  @@index([type])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      NotificationType
+  title     String
+  body      String?
+
+  data      Json?
+
+  read      Boolean          @default(false)
+  readAt    DateTime?        @map("read_at")
+
+  pushSent  Boolean          @default(false) @map("push_sent")
+  pushSentAt DateTime?       @map("push_sent_at")
+
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@map("notifications")
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+model DeviceToken {
+  id          String         @id @default(uuid())
+  userId      String         @map("user_id")
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  platform    DevicePlatform
+  token       String         @unique
+  deviceId    String         @unique @map("device_id")
+  deviceName  String?        @map("device_name")
+
+  fcmToken    String?        @map("fcm_token")
+  apnsToken   String?        @map("apns_token")
+  voipToken   String?        @map("voip_token")
+
+  isActive    Boolean        @default(true) @map("is_active")
+  lastUsedAt  DateTime       @default(now()) @map("last_used_at")
+
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@map("device_tokens")
+  @@index([userId])
+  @@index([token])
+  @@index([deviceId])
+}
+
+model WebhookLog {
+  id           String    @id @default(uuid())
+
+  source       String
+  eventType    String    @map("event_type")
+
+  method       String
+  url          String
+  headers      Json?
+  body         Json?
+
+  statusCode   Int?      @map("status_code")
+  responseBody Json?     @map("response_body")
+
+  processed    Boolean   @default(false)
+  processedAt  DateTime? @map("processed_at")
+  error        String?
+
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("webhook_logs")
+  @@index([source])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([processed])
+}
