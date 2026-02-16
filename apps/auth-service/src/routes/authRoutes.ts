@@ -68,6 +68,13 @@ router.post('/logout', authMiddleware, authController.logout);
  */
 router.put('/change-password', authMiddleware, authController.changePassword);
 
+/**
+ * @route   PUT /api/auth/profile
+ * @desc    Update user profile
+ * @access  Private
+ */
+router.put('/profile', authMiddleware, authController.updateProfile);
+
 // ============================================
 // 2FA ROUTES
 // ============================================

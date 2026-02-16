@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from './errorHandler';
+import { verifyAccessToken } from '../utils/jwt';
 
 // Extend Express Request type to include user
 declare global {
@@ -37,17 +38,14 @@ export const authMiddleware = async (
       throw new AppError('Invalid token format', 401);
     }
 
-    // TODO: Verify JWT token
-    // 1. Verify token with jsonwebtoken
-    // 2. Check if token is expired
-    // 3. Get user from database
-    // 4. Attach user to request
+    // Verify JWT token
+    const decoded = verifyAccessToken(token);
 
-    // Temporary mock user (remove when implementing JWT verification)
+    // Attach user to request
     req.user = {
-      id: 'mock-user-id',
-      email: 'mock@example.com',
-      role: 'USER',
+      id: decoded.userId,
+      email: decoded.email,
+      role: decoded.role,
     };
 
     next();
