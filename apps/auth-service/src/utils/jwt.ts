@@ -20,8 +20,7 @@ interface RefreshTokenPayload {
  */
 export const generateAccessToken = (userId: string, email: string, role: string): string => {
   const payload: TokenPayload = { userId, email, role };
-  const options: SignOptions = { expiresIn: JWT_EXPIRES_IN };
-  return jwt.sign(payload, JWT_SECRET, options);
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as SignOptions);
 };
 
 /**
@@ -29,8 +28,7 @@ export const generateAccessToken = (userId: string, email: string, role: string)
  */
 export const generateRefreshToken = (userId: string): string => {
   const payload: RefreshTokenPayload = { userId };
-  const options: SignOptions = { expiresIn: REFRESH_EXPIRES_IN };
-  return jwt.sign(payload, REFRESH_SECRET, options);
+  return jwt.sign(payload, REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES_IN } as SignOptions);
 };
 
 /**
