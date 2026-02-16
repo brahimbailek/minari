@@ -11,20 +11,15 @@ COPY turbo.json ./
 COPY packages ./packages
 COPY apps/auth-service ./apps/auth-service
 
-# Install dependencies
+# Install all dependencies (including dev dependencies for building)
 RUN npm ci
 
-# Build database package first
-WORKDIR /app/packages/database
-RUN npm run build
+# Generate Prisma Client
+RUN cd packages/database && npx prisma generate
 
-# Build shared package
-WORKDIR /app/packages/shared
-RUN npm run build
-
-# Build auth service
-WORKDIR /app/apps/auth-service
-RUN npm run build
+# Build packages
+RUN npm run build --filter=@commpro/shared --if-present
+RUN npm run build --filter=@commpro/auth-service
 
 # Production stage
 FROM node:20-alpine
@@ -33,29 +28,20 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy dependencies
+# Copy package files
+COPY package*.json ./
+
+# Copy all node_modules (includes Prisma Client)
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
 
-# Copy built packages
-COPY --from=builder /app/packages/database/dist ./packages/database/dist
-COPY --from=builder /app/packages/database/package.json ./packages/database/
-COPY --from=builder /app/packages/database/node_modules ./packages/database/node_modules
-
+# Copy built code
+COPY --from=builder /app/packages/database ./packages/database
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder /app/packages/shared/package.json ./packages/shared/
-
-# Copy built auth service
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/package.json
 COPY --from=builder /app/apps/auth-service/dist ./apps/auth-service/dist
-COPY --from=builder /app/apps/auth-service/package.json ./apps/auth-service/
+COPY --from=builder /app/apps/auth-service/package.json ./apps/auth-service/package.json
 
-# Copy Prisma schema for runtime
-COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
-
-# Generate Prisma Client
-RUN cd packages/database && npx prisma generate
-
-# Expose port (Railway assigns this automatically)
+# Expose port
 EXPOSE ${PORT:-3001}
 
 # Health check
