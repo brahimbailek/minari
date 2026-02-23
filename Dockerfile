@@ -38,7 +38,7 @@ ENV NODE_ENV=production
 COPY package*.json ./
 COPY turbo.json ./
 
-# Copy all node_modules (includes Prisma Client)
+# Copy all node_modules (includes Prisma Client and all workspace dependencies)
 COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built code
@@ -46,7 +46,6 @@ COPY --from=builder /app/packages/database ./packages/database
 COPY --from=builder /app/packages/shared ./packages/shared
 COPY --from=builder /app/apps/auth-service/dist ./apps/auth-service/dist
 COPY --from=builder /app/apps/auth-service/package.json ./apps/auth-service/package.json
-COPY --from=builder /app/apps/auth-service/node_modules ./apps/auth-service/node_modules
 
 # Expose port
 EXPOSE ${PORT:-3001}
