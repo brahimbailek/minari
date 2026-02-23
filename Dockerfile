@@ -29,8 +29,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install runtime deps for bcrypt
-RUN apk add --no-cache libstdc++
+# Install runtime deps for bcrypt and Prisma (OpenSSL 1.1 compatibility)
+RUN apk add --no-cache libstdc++ openssl1.1-compat
 
 ENV NODE_ENV=production
 
