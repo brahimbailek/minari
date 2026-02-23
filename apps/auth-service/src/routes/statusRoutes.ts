@@ -1,7 +1,21 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '@commpro/database';
 
 const router = Router();
+
+// Lazy load Prisma to avoid connection errors at startup
+let prisma: any = null;
+const getPrisma = async () => {
+  if (!prisma) {
+    try {
+      const db = await import('@commpro/database');
+      prisma = db.prisma;
+    } catch (error) {
+      console.error('Failed to load Prisma:', error);
+      return null;
+    }
+  }
+  return prisma;
+};
 
 // Phase 1 progress tracking
 const PHASE1_FEATURES = [
@@ -38,12 +52,16 @@ router.get('/api', async (_req: Request, res: Response) => {
   let userCount = 0;
 
   try {
-    const start = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
-    dbLatency = Date.now() - start;
-    dbStatus = 'connected';
-    userCount = await prisma.user.count();
-  } catch {
+    const db = await getPrisma();
+    if (db) {
+      const start = Date.now();
+      await db.$queryRaw`SELECT 1`;
+      dbLatency = Date.now() - start;
+      dbStatus = 'connected';
+      userCount = await db.user.count();
+    }
+  } catch (error) {
+    console.error('Database connection error:', error);
     dbStatus = 'error';
   }
 
@@ -79,12 +97,16 @@ router.get('/', async (_req: Request, res: Response) => {
   let userCount = 0;
 
   try {
-    const start = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
-    dbLatency = Date.now() - start;
-    dbStatus = 'connected';
-    userCount = await prisma.user.count();
-  } catch {
+    const db = await getPrisma();
+    if (db) {
+      const start = Date.now();
+      await db.$queryRaw`SELECT 1`;
+      dbLatency = Date.now() - start;
+      dbStatus = 'connected';
+      userCount = await db.user.count();
+    }
+  } catch (error) {
+    console.error('Database connection error:', error);
     dbStatus = 'error';
   }
 

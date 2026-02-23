@@ -1,5 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 
+// Fallback DATABASE_URL if not set (for healthcheck to work without DB)
+if (!process.env.DATABASE_URL) {
+  console.warn('⚠️  DATABASE_URL not set. Database features will be disabled.');
+  process.env.DATABASE_URL = 'postgresql://dummy:dummy@localhost:5432/dummy';
+}
+
 // PrismaClient is attached to the `global` object in development to prevent
 // exhausting your database connection limit.
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
