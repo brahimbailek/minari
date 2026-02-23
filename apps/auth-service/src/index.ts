@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
+import statusRoutes from './routes/statusRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
 
@@ -13,7 +14,9 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable for dashboard HTML
+}));
 app.use(cors({
   origin: process.env.WEB_APP_URL || 'http://localhost:3000',
   credentials: true,
@@ -33,6 +36,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
+app.use('/status', statusRoutes);
 app.use('/api/auth', authRoutes);
 
 // Error handling
