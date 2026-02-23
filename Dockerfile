@@ -24,13 +24,13 @@ RUN cd packages/database && DATABASE_URL="postgresql://dummy:dummy@localhost:543
 RUN npx turbo run build --filter=@commpro/shared
 RUN npx turbo run build --filter=@commpro/auth-service
 
-# Production stage
-FROM node:20-alpine
+# Production stage - Use Debian slim instead of Alpine for better OpenSSL compatibility
+FROM node:20-slim
 
 WORKDIR /app
 
-# Install runtime deps for bcrypt and Prisma (OpenSSL 1.1 compatibility)
-RUN apk add --no-cache libstdc++ openssl1.1-compat
+# Install runtime deps for Prisma
+RUN apt-get update && apt-get install -y openssl libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 
