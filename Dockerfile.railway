@@ -32,8 +32,8 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Install runtime deps for Prisma
-RUN apt-get update && apt-get install -y openssl libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
+# Install runtime deps for Prisma AND build deps for bcrypt rebuild
+RUN apt-get update && apt-get install -y openssl libssl3 ca-certificates python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 
@@ -43,6 +43,9 @@ COPY turbo.json ./
 
 # Copy all node_modules (includes Prisma Client and all workspace dependencies)
 COPY --from=builder /app/node_modules ./node_modules
+
+# Rebuild bcrypt for Debian (fixes Alpine/Debian incompatibility)
+RUN npm rebuild bcrypt --build-from-source
 
 # Copy built code
 COPY --from=builder /app/packages/database ./packages/database
