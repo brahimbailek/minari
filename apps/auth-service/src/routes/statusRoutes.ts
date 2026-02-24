@@ -19,12 +19,12 @@ const getPrisma = async () => {
 
 // Phase 1 progress tracking
 const PHASE1_FEATURES = [
-  { name: 'Auth Service', module: 'auth-service', status: 'done', progress: 100, details: 'Register, Login, JWT, Refresh, Logout, Profile' },
+  { name: 'Auth Service', module: 'auth-service', status: 'done', progress: 100, details: 'Register, Login, JWT, Refresh, Logout, Profile, Password Reset' },
+  { name: '2FA (TOTP)', module: 'auth-service', status: 'done', progress: 100, details: 'Enable, Confirm, Disable, Verify with speakeasy + QR code' },
   { name: 'Numbers Service', module: 'numbers-service', status: 'pending', progress: 0, details: 'Twilio virtual numbers (FR, US, UK, DE, ES, IT)' },
   { name: 'Messaging Service', module: 'messaging-service', status: 'pending', progress: 0, details: 'SMS/MMS, E2E encryption, real-time sync' },
   { name: 'Billing Service', module: 'billing-service', status: 'pending', progress: 0, details: 'Stripe subscriptions, invoices, usage tracking' },
   { name: 'Call Service', module: 'call-service', status: 'pending', progress: 0, details: 'Twilio Voice API, HD calls, CallKit/Telecom' },
-  { name: '2FA (TOTP)', module: 'auth-service', status: 'partial', progress: 30, details: 'Routes defined, implementation pending' },
   { name: 'Mobile iOS', module: 'mobile-ios', status: 'pending', progress: 0, details: 'Swift 5.9+, SwiftUI, CallKit, PushKit' },
   { name: 'Mobile Android', module: 'mobile-android', status: 'pending', progress: 0, details: 'Kotlin 1.9+, Jetpack Compose, Telecom' },
 ];
@@ -33,16 +33,16 @@ const AUTH_ENDPOINTS = [
   { method: 'POST', path: '/api/auth/register', status: 'live', auth: false },
   { method: 'POST', path: '/api/auth/login', status: 'live', auth: false },
   { method: 'POST', path: '/api/auth/refresh', status: 'live', auth: false },
-  { method: 'POST', path: '/api/auth/forgot-password', status: 'stub', auth: false },
-  { method: 'POST', path: '/api/auth/reset-password', status: 'stub', auth: false },
+  { method: 'POST', path: '/api/auth/forgot-password', status: 'live', auth: false },
+  { method: 'POST', path: '/api/auth/reset-password', status: 'live', auth: false },
   { method: 'GET', path: '/api/auth/me', status: 'live', auth: true },
   { method: 'POST', path: '/api/auth/logout', status: 'live', auth: true },
   { method: 'PUT', path: '/api/auth/change-password', status: 'live', auth: true },
   { method: 'PUT', path: '/api/auth/profile', status: 'live', auth: true },
-  { method: 'POST', path: '/api/auth/2fa/enable', status: 'stub', auth: true },
-  { method: 'POST', path: '/api/auth/2fa/confirm', status: 'stub', auth: true },
-  { method: 'POST', path: '/api/auth/2fa/disable', status: 'stub', auth: true },
-  { method: 'POST', path: '/api/auth/2fa/verify', status: 'stub', auth: false },
+  { method: 'POST', path: '/api/auth/2fa/enable', status: 'live', auth: true },
+  { method: 'POST', path: '/api/auth/2fa/confirm', status: 'live', auth: true },
+  { method: 'POST', path: '/api/auth/2fa/disable', status: 'live', auth: true },
+  { method: 'POST', path: '/api/auth/2fa/verify', status: 'live', auth: false },
 ];
 
 // JSON API for status data

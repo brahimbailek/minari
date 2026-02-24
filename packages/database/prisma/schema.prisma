@@ -131,16 +131,17 @@ model User {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  refreshTokens RefreshToken[]
-  phoneNumbers  PhoneNumber[]
-  contacts      Contact[]
-  calls         Call[]
-  messages      Message[]
-  subscription  Subscription?
-  invoices      Invoice[]
-  usageRecords  UsageRecord[]
-  notifications Notification[]
-  deviceTokens  DeviceToken[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  phoneNumbers        PhoneNumber[]
+  contacts            Contact[]
+  calls               Call[]
+  messages            Message[]
+  subscription        Subscription?
+  invoices            Invoice[]
+  usageRecords        UsageRecord[]
+  notifications       Notification[]
+  deviceTokens        DeviceToken[]
 
   @@map("users")
   @@index([email])
@@ -162,6 +163,24 @@ model RefreshToken {
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("refresh_tokens")
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  usedAt    DateTime? @map("used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("password_reset_tokens")
   @@index([userId])
   @@index([token])
   @@index([expiresAt])

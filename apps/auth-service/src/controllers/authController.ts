@@ -16,6 +16,8 @@ import {
   verify2FASchema,
   updateProfileSchema,
 } from '../utils/validation';
+import * as speakeasy from 'speakeasy';
+import * as QRCode from 'qrcode';
 
 /**
  * Auth Controller
@@ -392,15 +394,44 @@ export const authController = {
         });
       }
 
-      // TODO: Generate reset token and send email
-      // For now, just return success
-      // In production:
-      // 1. Generate secure random token
-      // 2. Save token + expiry in database
-      // 3. Send email with reset link
+      // Generate secure random token (32 bytes = 64 hex chars)
+      const crypto = require('crypto');
+      const resetToken = crypto.randomBytes(32).toString('hex');
+
+      // Token expires in 15 minutes
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+      // Delete any existing unused reset tokens for this user
+      await prisma.passwordResetToken.deleteMany({
+        where: {
+          userId: user.id,
+          used: false,
+        },
+      });
+
+      // Save reset token
+      await prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          token: resetToken,
+          expiresAt,
+        },
+      });
+
+      // TODO: Send email with reset link
+      // In production: Send email via SendGrid/AWS SES/Mailgun
+      // Reset link format: https://app.commpro.com/reset-password?token={resetToken}
+
+      // For development: Log the token (NEVER do this in production!)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔑 Password reset token for ${user.email}: ${resetToken}`);
+        console.log(`🔗 Reset link: ${process.env.WEB_APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`);
+      }
 
       res.status(200).json({
         message: 'If an account exists with that email, a reset link has been sent.',
+        // In dev mode, include token for testing
+        ...(process.env.NODE_ENV === 'development' && { resetToken }),
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -418,14 +449,52 @@ export const authController = {
     try {
       const data = resetPasswordSchema.parse(req.body);
 
-      // TODO: Implement password reset logic
-      // 1. Verify reset token
-      // 2. Check token expiry
-      // 3. Update password
-      // 4. Invalidate token
+      // Find reset token
+      const resetTokenRecord = await prisma.passwordResetToken.findUnique({
+        where: { token: data.token },
+        include: { user: true },
+      });
+
+      if (!resetTokenRecord) {
+        throw new AppError('Invalid or expired reset token', 400);
+      }
+
+      // Check if token has been used
+      if (resetTokenRecord.used) {
+        throw new AppError('Reset token has already been used', 400);
+      }
+
+      // Check if token is expired
+      if (resetTokenRecord.expiresAt < new Date()) {
+        throw new AppError('Reset token has expired', 400);
+      }
+
+      const user = resetTokenRecord.user;
+
+      // Hash new password
+      const newPasswordHash = await hashPassword(data.newPassword);
+
+      // Update password and mark token as used
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: user.id },
+          data: { passwordHash: newPasswordHash },
+        }),
+        prisma.passwordResetToken.update({
+          where: { id: resetTokenRecord.id },
+          data: {
+            used: true,
+            usedAt: new Date(),
+          },
+        }),
+        // Invalidate all refresh tokens for security
+        prisma.refreshToken.deleteMany({
+          where: { userId: user.id },
+        }),
+      ]);
 
       res.status(200).json({
-        message: 'Password reset endpoint - to be fully implemented',
+        message: 'Password reset successfully. Please login with your new password.',
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -445,14 +514,44 @@ export const authController = {
         throw new AppError('Unauthorized', 401);
       }
 
-      // TODO: Implement 2FA enable
-      // 1. Generate secret with speakeasy
-      // 2. Generate QR code
-      // 3. Save secret temporarily (not yet confirmed)
-      // 4. Return QR code + backup codes
+      // Get user
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Check if 2FA is already enabled
+      if (user.twoFaEnabled) {
+        throw new AppError('2FA is already enabled for this account', 400);
+      }
+
+      // Generate secret
+      const secret = speakeasy.generateSecret({
+        name: `CommPro (${user.email})`,
+        issuer: 'CommPro',
+        length: 32,
+      });
+
+      // Save secret temporarily (will be confirmed later)
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          twoFaSecret: secret.base32,
+          // Don't enable 2FA yet - wait for confirmation
+        },
+      });
+
+      // Generate QR code
+      const qrCodeDataURL = await QRCode.toDataURL(secret.otpauth_url!);
 
       res.status(200).json({
-        message: 'Enable 2FA endpoint - to be fully implemented (requires speakeasy + qrcode)',
+        message: 'Scan this QR code with your authenticator app, then confirm with a code',
+        qrCode: qrCodeDataURL,
+        secret: secret.base32, // For manual entry
+        manualEntryKey: secret.base32,
       });
     } catch (error) {
       next(error);
@@ -470,13 +569,48 @@ export const authController = {
 
       const data = confirm2FASchema.parse(req.body);
 
-      // TODO: Implement 2FA confirmation
-      // 1. Verify TOTP code with speakeasy
-      // 2. Enable 2FA for user
-      // 3. Save backup codes
+      // Get user
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Check if user has a secret (from enable2FA)
+      if (!user.twoFaSecret) {
+        throw new AppError('Please enable 2FA first', 400);
+      }
+
+      // Check if 2FA is already enabled
+      if (user.twoFaEnabled) {
+        throw new AppError('2FA is already enabled', 400);
+      }
+
+      // Verify TOTP code
+      const verified = speakeasy.totp.verify({
+        secret: user.twoFaSecret,
+        encoding: 'base32',
+        token: data.code,
+        window: 2, // Allow 2 time steps before/after for clock skew
+      });
+
+      if (!verified) {
+        throw new AppError('Invalid 2FA code', 400);
+      }
+
+      // Enable 2FA
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          twoFaEnabled: true,
+        },
+      });
 
       res.status(200).json({
-        message: 'Confirm 2FA endpoint - to be fully implemented',
+        message: '2FA has been successfully enabled for your account',
+        twoFaEnabled: true,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -498,13 +632,54 @@ export const authController = {
 
       const data = disable2FASchema.parse(req.body);
 
-      // TODO: Implement 2FA disable
-      // 1. Verify TOTP code
-      // 2. Disable 2FA
-      // 3. Clear secret
+      // Get user
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+
+      // Check if 2FA is enabled
+      if (!user.twoFaEnabled) {
+        throw new AppError('2FA is not enabled for this account', 400);
+      }
+
+      // Verify password (for security)
+      const isPasswordValid = await comparePassword(data.password, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new AppError('Invalid password', 401);
+      }
+
+      // Verify TOTP code
+      if (!user.twoFaSecret) {
+        throw new AppError('2FA secret not found', 500);
+      }
+
+      const verified = speakeasy.totp.verify({
+        secret: user.twoFaSecret,
+        encoding: 'base32',
+        token: data.code,
+        window: 2,
+      });
+
+      if (!verified) {
+        throw new AppError('Invalid 2FA code', 400);
+      }
+
+      // Disable 2FA and clear secret
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          twoFaEnabled: false,
+          twoFaSecret: null,
+        },
+      });
 
       res.status(200).json({
-        message: 'Disable 2FA endpoint - to be fully implemented',
+        message: '2FA has been successfully disabled',
+        twoFaEnabled: false,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -522,13 +697,79 @@ export const authController = {
     try {
       const data = verify2FASchema.parse(req.body);
 
-      // TODO: Implement 2FA verification
-      // 1. Get user from email
-      // 2. Verify TOTP code with speakeasy
-      // 3. Generate JWT tokens
+      // Find user by email
+      const user = await prisma.user.findUnique({
+        where: { email: data.email.toLowerCase() },
+      });
+
+      if (!user) {
+        throw new AppError('Invalid email or password', 401);
+      }
+
+      // Check if user is active
+      if (!user.isActive) {
+        throw new AppError('Account is disabled', 403);
+      }
+
+      // Verify password
+      const isPasswordValid = await comparePassword(data.password, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new AppError('Invalid email or password', 401);
+      }
+
+      // Check if 2FA is enabled
+      if (!user.twoFaEnabled || !user.twoFaSecret) {
+        throw new AppError('2FA is not enabled for this account', 400);
+      }
+
+      // Verify TOTP code
+      const verified = speakeasy.totp.verify({
+        secret: user.twoFaSecret,
+        encoding: 'base32',
+        token: data.code,
+        window: 2,
+      });
+
+      if (!verified) {
+        throw new AppError('Invalid 2FA code', 400);
+      }
+
+      // Update last login
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLogin: new Date() },
+      });
+
+      // Generate tokens
+      const accessToken = generateAccessToken(user.id, user.email, user.role);
+      const refreshToken = generateRefreshToken(user.id);
+
+      // Save refresh token
+      await prisma.refreshToken.create({
+        data: {
+          userId: user.id,
+          token: refreshToken,
+          expiresAt: getTokenExpiryDate(),
+          deviceId: data.deviceId,
+          deviceName: data.deviceName,
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+        },
+      });
 
       res.status(200).json({
-        message: 'Verify 2FA endpoint - to be fully implemented',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          companyName: user.companyName,
+          role: user.role,
+          emailVerified: user.emailVerified,
+          twoFaEnabled: user.twoFaEnabled,
+        },
+        accessToken,
+        refreshToken,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {

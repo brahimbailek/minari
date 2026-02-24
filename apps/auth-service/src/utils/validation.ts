@@ -69,6 +69,7 @@ export const confirm2FASchema = z.object({
  * 2FA disable schema
  */
 export const disable2FASchema = z.object({
+  password: z.string().min(1, 'Password is required'),
   code: z.string().length(6, '2FA code must be 6 digits'),
 });
 
@@ -77,8 +78,10 @@ export const disable2FASchema = z.object({
  */
 export const verify2FASchema = z.object({
   email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
   code: z.string().length(6, '2FA code must be 6 digits'),
-  tempToken: z.string().optional(), // Temporary token from login step
+  deviceId: z.string().optional(),
+  deviceName: z.string().optional(),
 });
 
 /**
