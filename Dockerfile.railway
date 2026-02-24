@@ -1,6 +1,9 @@
 # Build stage - Use Debian to match production stage
 FROM node:20-slim AS builder
 
+# Force rebuild to use Debian for bcrypt (cache buster)
+ARG REBUILD=1
+
 WORKDIR /app
 
 # Install build dependencies for bcrypt native compilation
