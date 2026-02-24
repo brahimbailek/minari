@@ -46,14 +46,25 @@ function updateAuthSection(token) {
 
 // Get service URL
 function getServiceUrl(service) {
-    const urls = {
+    // Check if custom URL is set, otherwise use production URLs
+    const customUrls = {
         'auth': document.getElementById('authUrl').value,
         'numbers': document.getElementById('numbersUrl').value,
         'messaging': document.getElementById('messagingUrl').value,
         'billing': document.getElementById('billingUrl').value,
         'call': document.getElementById('callUrl').value
     };
-    return urls[service] || 'http://localhost:3001';
+
+    // Default production URLs (Railway)
+    const productionUrls = {
+        'auth': 'https://commpro-auth.railway.app',
+        'numbers': 'https://commpro-numbers.railway.app',
+        'messaging': 'https://commpro-messaging.railway.app',
+        'billing': 'https://commpro-billing.railway.app',
+        'call': 'https://commpro-call.railway.app'
+    };
+
+    return customUrls[service] || productionUrls[service] || 'http://localhost:3001';
 }
 
 // Test endpoints
