@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CommPro - Test Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .service-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .service-icon {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+
+        .service-title {
+            flex: 1;
+        }
+
+        .service-title h2 {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+
+        .service-status {
+            font-size: 0.85em;
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .service-status.offline {
+            color: #ef4444;
+        }
+
+        .endpoint {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .endpoint-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .method {
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-right: 10px;
+            color: white;
+        }
+
+        .method.GET { background: #10b981; }
+        .method.POST { background: #3b82f6; }
+        .method.PUT { background: #f59e0b; }
+        .method.DELETE { background: #ef4444; }
+
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #666;
+            flex: 1;
+        }
+
+        .test-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .test-btn:hover {
+            background: #5568d3;
+        }
+
+        .test-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .endpoint-description {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .config-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .config-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-item label {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .config-item input {
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.9em;
+            transition: border-color 0.3s ease;
+        }
+
+        .config-item input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .response-viewer {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .response-viewer.active {
+            display: block;
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .response-content {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .close-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .auth-section {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .auth-token {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            word-break: break-all;
+            margin-top: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 CommPro Test Dashboard</h1>
+            <p class="subtitle">Test et visualisation des APIs backend</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">6</div>
+                <div class="stat-label">Services Backend</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">38</div>
+                <div class="stat-label">API Endpoints</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="successCount">0</div>
+                <div class="stat-label">Tests Réussis</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="failCount">0</div>
+                <div class="stat-label">Tests Échoués</div>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h2>⚙️ Configuration</h2>
+            <div class="config-grid">
+                <div class="config-item">
+                    <label>Auth Service URL</label>
+                    <input type="text" id="authUrl" value="http://localhost:3001" />
+                </div>
+                <div class="config-item">
+                    <label>Numbers Service URL</label>
+                    <input type="text" id="numbersUrl" value="http://localhost:3002" />
+                </div>
+                <div class="config-item">
+                    <label>Messaging Service URL</label>
+                    <input type="text" id="messagingUrl" value="http://localhost:3003" />
+                </div>
+                <div class="config-item">
+                    <label>Billing Service URL</label>
+                    <input type="text" id="billingUrl" value="http://localhost:3004" />
+                </div>
+                <div class="config-item">
+                    <label>Call Service URL</label>
+                    <input type="text" id="callUrl" value="http://localhost:3005" />
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-section" id="authSection" style="display: none;">
+            <h3>🔐 Authentification Active</h3>
+            <div class="auth-token" id="authToken"></div>
+        </div>
+
+        <div class="services-grid">
+            <!-- Auth Service -->
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">🔐</div>
+                    <div class="service-title">
+                        <h2>Auth Service</h2>
+                        <div class="service-status" id="auth-status">● En ligne</div>
+                    </div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method POST">POST</span>
+                        <span class="endpoint-path">/api/auth/register</span>
+                        <button class="test-btn" onclick="testEndpoint('auth', 'register')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Créer un nouveau compte utilisateur</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method POST">POST</span>
+                        <span class="endpoint-path">/api/auth/login</span>
+                        <button class="test-btn" onclick="testEndpoint('auth', 'login')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Se connecter et obtenir un JWT</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method POST">POST</span>
+                        <span class="endpoint-path">/api/auth/2fa/enable</span>
+                        <button class="test-btn" onclick="testEndpoint('auth', '2fa-enable')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Activer la 2FA TOTP</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method GET">GET</span>
+                        <span class="endpoint-path">/api/auth/me</span>
+                        <button class="test-btn" onclick="testEndpoint('auth', 'me')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Obtenir le profil utilisateur</div>
+                </div>
+            </div>
+
+            <!-- Numbers Service -->
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">📞</div>
+                    <div class="service-title">
+                        <h2>Numbers Service</h2>
+                        <div class="service-status" id="numbers-status">● En ligne</div>
+                    </div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method GET">GET</span>
+                        <span class="endpoint-path">/api/numbers/available</span>
+                        <button class="test-btn" onclick="testEndpoint('numbers', 'search')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Chercher des numéros virtuels</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method POST">POST</span>
+                        <span class="endpoint-path">/api/numbers/purchase</span>
+                        <button class="test-btn" onclick="testEndpoint('numbers', 'purchase')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Acheter un numéro virtuel</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method GET">GET</span>
+                        <span class="endpoint-path">/api/numbers</span>
+                        <button class="test-btn" onclick="testEndpoint('numbers', 'list')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Liste des numéros achetés</div>
+                </div>
+            </div>
+
+            <!-- Messaging Service -->
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">💬</div>
+                    <div class="service-title">
+                        <h2>Messaging Service</h2>
+                        <div class="service-status" id="messaging-status">● En ligne</div>
+                    </div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method POST">POST</span>
+                        <span class="endpoint-path">/api/messages/sms</span>
+                        <button class="test-btn" onclick="testEndpoint('messaging', 'send-sms')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Envoyer un SMS</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method GET">GET</span>
+                        <span class="endpoint-path">/api/messages/conversations</span>
+                        <button class="test-btn" onclick="testEndpoint('messaging', 'conversations')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Liste des conversations</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method GET">GET</span>
+                        <span class="endpoint-path">/api/contacts</span>
+                        <button class="test-btn" onclick="testEndpoint('messaging', 'contacts')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Liste des contacts</div>
+                </div>
+            </div>
+
+            <!-- Call Service -->
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">📱</div>
+                    <div class="service-title">
+                        <h2>Call Service</h2>
+                        <div class="service-status" id="call-status">● En ligne</div>
+                    </div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method POST">POST</span>
+                        <span class="endpoint-path">/api/calls/initiate</span>
+                        <button class="test-btn" onclick="testEndpoint('call', 'initiate')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Démarrer un appel</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method GET">GET</span>
+                        <span class="endpoint-path">/api/calls</span>
+                        <button class="test-btn" onclick="testEndpoint('call', 'list')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Historique des appels</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method GET">GET</span>
+                        <span class="endpoint-path">/api/calls/stats</span>
+                        <button class="test-btn" onclick="testEndpoint('call', 'stats')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Statistiques d'appels</div>
+                </div>
+            </div>
+
+            <!-- Billing Service -->
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">💳</div>
+                    <div class="service-title">
+                        <h2>Billing Service</h2>
+                        <div class="service-status" id="billing-status">● En ligne</div>
+                    </div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method POST">POST</span>
+                        <span class="endpoint-path">/api/billing/subscribe</span>
+                        <button class="test-btn" onclick="testEndpoint('billing', 'subscribe')">Test</button>
+                    </div>
+                    <div class="endpoint-description">S'abonner à un tier</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method GET">GET</span>
+                        <span class="endpoint-path">/api/billing/subscription</span>
+                        <button class="test-btn" onclick="testEndpoint('billing', 'subscription')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Détails de l'abonnement</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method GET">GET</span>
+                        <span class="endpoint-path">/api/billing/usage</span>
+                        <button class="test-btn" onclick="testEndpoint('billing', 'usage')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Usage actuel (SMS/Calls)</div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method GET">GET</span>
+                        <span class="endpoint-path">/api/billing/invoices</span>
+                        <button class="test-btn" onclick="testEndpoint('billing', 'invoices')">Test</button>
+                    </div>
+                    <div class="endpoint-description">Liste des factures</div>
+                </div>
+            </div>
+
+            <!-- Status Service -->
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">📊</div>
+                    <div class="service-title">
+                        <h2>Dashboard</h2>
+                        <div class="service-status">● En ligne</div>
+                    </div>
+                </div>
+
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <span class="method GET">GET</span>
+                        <span class="endpoint-path">/status</span>
+                        <button class="test-btn" onclick="testEndpoint('status', 'health')">Test All</button>
+                    </div>
+                    <div class="endpoint-description">Santé de tous les services</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="response-viewer" id="responseViewer">
+            <div class="response-header">
+                <h3>📋 Réponse API</h3>
+                <button class="close-btn" onclick="closeResponse()">Fermer</button>
+            </div>
+            <div class="response-content" id="responseContent"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
