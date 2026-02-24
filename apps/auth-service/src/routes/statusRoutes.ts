@@ -24,7 +24,7 @@ const PHASE1_FEATURES = [
   { name: 'Numbers Service', module: 'numbers-service', status: 'done', progress: 100, details: 'Search, Purchase, List, Update, Release (Twilio API)' },
   { name: 'Messaging Service', module: 'messaging-service', status: 'done', progress: 100, details: 'SMS/MMS, E2E encryption (AES-256-GCM), Conversations, Webhooks' },
   { name: 'Billing Service', module: 'billing-service', status: 'pending', progress: 0, details: 'Stripe subscriptions, invoices, usage tracking' },
-  { name: 'Call Service', module: 'call-service', status: 'pending', progress: 0, details: 'Twilio Voice API, HD calls, CallKit/Telecom' },
+  { name: 'Call Service', module: 'call-service', status: 'done', progress: 100, details: 'Twilio Voice, Inbound/Outbound calls, TwiML webhooks, Quality metrics' },
   { name: 'Mobile iOS', module: 'mobile-ios', status: 'pending', progress: 0, details: 'Swift 5.9+, SwiftUI, CallKit, PushKit' },
   { name: 'Mobile Android', module: 'mobile-android', status: 'pending', progress: 0, details: 'Kotlin 1.9+, Jetpack Compose, Telecom' },
 ];
@@ -58,6 +58,12 @@ const API_ENDPOINTS = [
   { method: 'GET', path: '/api/messages/conversations/:id', status: 'live', auth: true, service: 'messaging' },
   { method: 'PUT', path: '/api/messages/read', status: 'live', auth: true, service: 'messaging' },
   { method: 'POST', path: '/webhook/sms', status: 'live', auth: false, service: 'messaging' },
+  // Call Service
+  { method: 'POST', path: '/api/calls/initiate', status: 'live', auth: true, service: 'call' },
+  { method: 'GET', path: '/api/calls', status: 'live', auth: true, service: 'call' },
+  { method: 'GET', path: '/api/calls/:id', status: 'live', auth: true, service: 'call' },
+  { method: 'GET', path: '/api/calls/:id/quality', status: 'live', auth: true, service: 'call' },
+  { method: 'POST', path: '/webhook/voice', status: 'live', auth: false, service: 'call' },
 ];
 
 // JSON API for status data
