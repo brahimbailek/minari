@@ -22,7 +22,7 @@ const PHASE1_FEATURES = [
   { name: 'Auth Service', module: 'auth-service', status: 'done', progress: 100, details: 'Register, Login, JWT, Refresh, Logout, Profile, Password Reset' },
   { name: '2FA (TOTP)', module: 'auth-service', status: 'done', progress: 100, details: 'Enable, Confirm, Disable, Verify with speakeasy + QR code' },
   { name: 'Numbers Service', module: 'numbers-service', status: 'done', progress: 100, details: 'Search, Purchase, List, Update, Release (Twilio API)' },
-  { name: 'Messaging Service', module: 'messaging-service', status: 'pending', progress: 0, details: 'SMS/MMS, E2E encryption, real-time sync' },
+  { name: 'Messaging Service', module: 'messaging-service', status: 'done', progress: 100, details: 'SMS/MMS, E2E encryption (AES-256-GCM), Conversations, Webhooks' },
   { name: 'Billing Service', module: 'billing-service', status: 'pending', progress: 0, details: 'Stripe subscriptions, invoices, usage tracking' },
   { name: 'Call Service', module: 'call-service', status: 'pending', progress: 0, details: 'Twilio Voice API, HD calls, CallKit/Telecom' },
   { name: 'Mobile iOS', module: 'mobile-ios', status: 'pending', progress: 0, details: 'Swift 5.9+, SwiftUI, CallKit, PushKit' },
@@ -51,6 +51,13 @@ const API_ENDPOINTS = [
   { method: 'POST', path: '/api/numbers/purchase', status: 'live', auth: true, service: 'numbers' },
   { method: 'PUT', path: '/api/numbers/:id', status: 'live', auth: true, service: 'numbers' },
   { method: 'DELETE', path: '/api/numbers/:id', status: 'live', auth: true, service: 'numbers' },
+  // Messaging Service
+  { method: 'POST', path: '/api/messages/send', status: 'live', auth: true, service: 'messaging' },
+  { method: 'POST', path: '/api/messages/send-mms', status: 'live', auth: true, service: 'messaging' },
+  { method: 'GET', path: '/api/messages/conversations', status: 'live', auth: true, service: 'messaging' },
+  { method: 'GET', path: '/api/messages/conversations/:id', status: 'live', auth: true, service: 'messaging' },
+  { method: 'PUT', path: '/api/messages/read', status: 'live', auth: true, service: 'messaging' },
+  { method: 'POST', path: '/webhook/sms', status: 'live', auth: false, service: 'messaging' },
 ];
 
 // JSON API for status data
