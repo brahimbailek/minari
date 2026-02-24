@@ -57,11 +57,11 @@ function getServiceUrl(service) {
 
     // Default production URLs (Railway)
     const productionUrls = {
-        'auth': 'https://commpro-auth.railway.app',
-        'numbers': 'https://commpro-numbers.railway.app',
-        'messaging': 'https://commpro-messaging.railway.app',
-        'billing': 'https://commpro-billing.railway.app',
-        'call': 'https://commpro-call.railway.app'
+        'auth': 'https://auth-production.up.railway.app',
+        'numbers': 'https://numbers-production.up.railway.app',
+        'messaging': 'https://messaging-production.up.railway.app',
+        'billing': 'https://billing-production.up.railway.app',
+        'call': 'https://call-production.up.railway.app'
     };
 
     return customUrls[service] || productionUrls[service] || 'http://localhost:3001';
