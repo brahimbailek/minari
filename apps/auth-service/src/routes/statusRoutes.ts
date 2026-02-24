@@ -21,7 +21,7 @@ const getPrisma = async () => {
 const PHASE1_FEATURES = [
   { name: 'Auth Service', module: 'auth-service', status: 'done', progress: 100, details: 'Register, Login, JWT, Refresh, Logout, Profile, Password Reset' },
   { name: '2FA (TOTP)', module: 'auth-service', status: 'done', progress: 100, details: 'Enable, Confirm, Disable, Verify with speakeasy + QR code' },
-  { name: 'Numbers Service', module: 'numbers-service', status: 'pending', progress: 0, details: 'Twilio virtual numbers (FR, US, UK, DE, ES, IT)' },
+  { name: 'Numbers Service', module: 'numbers-service', status: 'done', progress: 100, details: 'Search, Purchase, List, Update, Release (Twilio API)' },
   { name: 'Messaging Service', module: 'messaging-service', status: 'pending', progress: 0, details: 'SMS/MMS, E2E encryption, real-time sync' },
   { name: 'Billing Service', module: 'billing-service', status: 'pending', progress: 0, details: 'Stripe subscriptions, invoices, usage tracking' },
   { name: 'Call Service', module: 'call-service', status: 'pending', progress: 0, details: 'Twilio Voice API, HD calls, CallKit/Telecom' },
@@ -29,20 +29,28 @@ const PHASE1_FEATURES = [
   { name: 'Mobile Android', module: 'mobile-android', status: 'pending', progress: 0, details: 'Kotlin 1.9+, Jetpack Compose, Telecom' },
 ];
 
-const AUTH_ENDPOINTS = [
-  { method: 'POST', path: '/api/auth/register', status: 'live', auth: false },
-  { method: 'POST', path: '/api/auth/login', status: 'live', auth: false },
-  { method: 'POST', path: '/api/auth/refresh', status: 'live', auth: false },
-  { method: 'POST', path: '/api/auth/forgot-password', status: 'live', auth: false },
-  { method: 'POST', path: '/api/auth/reset-password', status: 'live', auth: false },
-  { method: 'GET', path: '/api/auth/me', status: 'live', auth: true },
-  { method: 'POST', path: '/api/auth/logout', status: 'live', auth: true },
-  { method: 'PUT', path: '/api/auth/change-password', status: 'live', auth: true },
-  { method: 'PUT', path: '/api/auth/profile', status: 'live', auth: true },
-  { method: 'POST', path: '/api/auth/2fa/enable', status: 'live', auth: true },
-  { method: 'POST', path: '/api/auth/2fa/confirm', status: 'live', auth: true },
-  { method: 'POST', path: '/api/auth/2fa/disable', status: 'live', auth: true },
-  { method: 'POST', path: '/api/auth/2fa/verify', status: 'live', auth: false },
+const API_ENDPOINTS = [
+  // Auth Service
+  { method: 'POST', path: '/api/auth/register', status: 'live', auth: false, service: 'auth' },
+  { method: 'POST', path: '/api/auth/login', status: 'live', auth: false, service: 'auth' },
+  { method: 'POST', path: '/api/auth/refresh', status: 'live', auth: false, service: 'auth' },
+  { method: 'POST', path: '/api/auth/forgot-password', status: 'live', auth: false, service: 'auth' },
+  { method: 'POST', path: '/api/auth/reset-password', status: 'live', auth: false, service: 'auth' },
+  { method: 'GET', path: '/api/auth/me', status: 'live', auth: true, service: 'auth' },
+  { method: 'POST', path: '/api/auth/logout', status: 'live', auth: true, service: 'auth' },
+  { method: 'PUT', path: '/api/auth/change-password', status: 'live', auth: true, service: 'auth' },
+  { method: 'PUT', path: '/api/auth/profile', status: 'live', auth: true, service: 'auth' },
+  { method: 'POST', path: '/api/auth/2fa/enable', status: 'live', auth: true, service: 'auth' },
+  { method: 'POST', path: '/api/auth/2fa/confirm', status: 'live', auth: true, service: 'auth' },
+  { method: 'POST', path: '/api/auth/2fa/disable', status: 'live', auth: true, service: 'auth' },
+  { method: 'POST', path: '/api/auth/2fa/verify', status: 'live', auth: false, service: 'auth' },
+  // Numbers Service
+  { method: 'GET', path: '/api/numbers/available', status: 'live', auth: true, service: 'numbers' },
+  { method: 'GET', path: '/api/numbers', status: 'live', auth: true, service: 'numbers' },
+  { method: 'GET', path: '/api/numbers/:id', status: 'live', auth: true, service: 'numbers' },
+  { method: 'POST', path: '/api/numbers/purchase', status: 'live', auth: true, service: 'numbers' },
+  { method: 'PUT', path: '/api/numbers/:id', status: 'live', auth: true, service: 'numbers' },
+  { method: 'DELETE', path: '/api/numbers/:id', status: 'live', auth: true, service: 'numbers' },
 ];
 
 // JSON API for status data
@@ -85,7 +93,7 @@ router.get('/api', async (_req: Request, res: Response) => {
       heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
     },
     services: PHASE1_FEATURES,
-    endpoints: AUTH_ENDPOINTS,
+    endpoints: API_ENDPOINTS,
     node: process.version,
   });
 });
@@ -121,8 +129,8 @@ router.get('/', async (_req: Request, res: Response) => {
     PHASE1_FEATURES.reduce((sum, f) => sum + f.progress, 0) / PHASE1_FEATURES.length
   );
 
-  const liveEndpoints = AUTH_ENDPOINTS.filter(e => e.status === 'live').length;
-  const totalEndpoints = AUTH_ENDPOINTS.length;
+  const liveEndpoints = API_ENDPOINTS.filter(e => e.status === 'live').length;
+  const totalEndpoints = API_ENDPOINTS.length;
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -363,7 +371,7 @@ router.get('/', async (_req: Request, res: Response) => {
           </tr>
         </thead>
         <tbody>
-          ${AUTH_ENDPOINTS.map(ep => `
+          ${API_ENDPOINTS.map(ep => `
           <tr>
             <td><span class="method-badge ${ep.method}">${ep.method}</span></td>
             <td class="path">${ep.path}</td>
